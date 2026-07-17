@@ -1,0 +1,46 @@
+name: 'CWS Gate'
+description: >-
+  Independent pre-submission checklist for a local unpacked Chrome extension
+  directory (Manifest V3 only). Not a Google review; a clean run never
+  predicts or guarantees Chrome Web Store approval. Scans the selected
+  directory only - no network access, no ZIP/CRX extraction, no telemetry.
+branding:
+  icon: 'shield'
+  color: 'blue'
+inputs:
+  path:
+    description: 'Directory to scan. Must resolve inside GITHUB_WORKSPACE; paths that escape it are rejected.'
+    required: false
+    default: '.'
+  fail-on:
+    description: 'Minimum severity that fails the step: error|warn|note|never.'
+    required: false
+    default: 'error'
+  json-file:
+    description: 'If set, write the JSON report to this path. Must resolve inside GITHUB_WORKSPACE (like path) and must not contain a stray CR/LF; otherwise rejected and nothing is written.'
+    required: false
+    default: ''
+  sarif-file:
+    description: 'If set, write the SARIF 2.1.0 report to this path. Must resolve inside GITHUB_WORKSPACE (like path) and must not contain a stray CR/LF; otherwise rejected and nothing is written. CWS Gate never uploads it; add a separate upload step to do that explicitly.'
+    required: false
+    default: ''
+outputs:
+  errors:
+    description: 'Number of error-level findings.'
+  warnings:
+    description: 'Number of warning-level findings.'
+  notes:
+    description: 'Number of note-level findings.'
+  findings:
+    description: 'Total findings (errors + warnings + notes).'
+  status:
+    description: '"complete" or "incomplete".'
+  threshold-triggered:
+    description: '"true" if findings met or exceeded fail-on, else "false".'
+  json-file:
+    description: 'Path written, only set if the json-file input was set, resolved safely inside GITHUB_WORKSPACE, and the write succeeded.'
+  sarif-file:
+    description: 'Path written, only set if the sarif-file input was set, resolved safely inside GITHUB_WORKSPACE, and the write succeeded.'
+runs:
+  using: 'node20'
+  main: 'action/index.js'

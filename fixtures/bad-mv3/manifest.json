@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Bad Fixture",
+  "version": "1.0.0",
+  "description": "Fixture exercising multiple CWS Gate rules at once.",
+  "icons": {
+    "16": "icon16.png"
+  },
+  "browser_action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "bg.js"
+  },
+  "action": {
+    "default_popup": "missing-popup.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'unsafe-eval'; object-src 'self'"
+  },
+  "permissions": ["tabs"],
+  "host_permissions": ["<all_urls>"],
+  "default_locale": "en"
+}

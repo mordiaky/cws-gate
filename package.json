@@ -1,0 +1,19 @@
+{
+  "name": "cws-gate",
+  "version": "0.1.0",
+  "description": "Dependency-free Node CLI and GitHub Action that scans a local unpacked Chrome extension directory for MV3 pre-submission issues. Independent checklist only, not a Google review.",
+  "license": "MIT",
+  "private": true,
+  "bin": {
+    "cws-gate": "bin/cws-gate.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "self-check": "node bin/cws-gate.js --self-check"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

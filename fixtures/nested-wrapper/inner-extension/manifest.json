@@ -1,0 +1,7 @@
+{
+  "manifest_version": 3,
+  "name": "Inner",
+  "version": "1.0.0",
+  "description": "Wrapped fixture; CWS Gate should name the wrapper, not descend into it.",
+  "icons": { "128": "icon128.png" }
+}

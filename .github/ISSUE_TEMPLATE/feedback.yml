@@ -1,0 +1,85 @@
+name: CWS Gate feedback
+description: Report a false positive/negative, a missing check, or general feedback on the validation beta.
+title: "[cws-gate] "
+labels: ["cws-gate"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying the CWS Gate validation beta. This is a directory-only,
+        zero-network, dependency-free pre-submission checklist - not a Google
+        review, and a clean run never guarantees Chrome Web Store approval.
+
+        Please redact secrets, tokens, and real URLs before pasting anything below.
+
+        The three dropdowns below feed this beta's validation-experiment counts
+        directly (see the README's "Validation experiment" section) - please
+        answer them even if the rest of the form doesn't apply to you.
+
+        One response per participant: if you've already filed feedback, please
+        edit that issue instead of opening a new one. Only your latest issue
+        counts toward the totals, and it counts once per signal even if you
+        file more than one.
+  - type: dropdown
+    id: real_run
+    attributes:
+      label: Did you run CWS Gate against a real (non-fixture) extension package?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: dropdown
+    id: actionable_finding
+    attributes:
+      label: Did that run surface at least one actionable finding (a real issue in your package)?
+      options:
+        - "Yes"
+        - "No"
+        - "N/A - I did not run it against a real package"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of feedback is this?
+      options:
+        - False positive (a finding that shouldn't have fired)
+        - False negative (a real issue CWS Gate missed)
+        - Known omission you'd like prioritized
+        - Other feedback
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID (if applicable)
+      placeholder: e.g. CWSG010
+    validations:
+      required: false
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened?
+      description: Describe the manifest/file shape involved.
+    validations:
+      required: true
+  - type: dropdown
+    id: launch_link_interest
+    attributes:
+      label: >-
+        If/when the future advanced report + policy pack ($19 one-time, not
+        currently for sale) launches, would you want an explicit checkout
+        link sent to you?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CWS Gate version
+      placeholder: run `cws-gate --version`
+    validations:
+      required: false

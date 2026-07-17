@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Privacy Sentinel Fixture",
+  "version": "1.0.0",
+  "description": "Confirms secrets and absolute paths never reach a report.",
+  "icons": { "128": "icon128.png" },
+  "action": { "default_popup": "../sk_live_popup_secret_should_never_leak.html" },
+  "content_security_policy": { "extension_pages": "script-src 'nonce-sk_live_csp_secret_should_never_leak'" },
+  "host_permissions": ["https://*/webhook?token=sk_live_host_secret_should_never_leak"]
+}
