@@ -5,7 +5,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { runAction, isPathInside, realOrNull, resolveOutputTarget, outputTargetsCollide, writeOutput } = require('../action/index');
+const { runAction, isPathInside, realOrNull, resolveOutputTarget, writeOutput } = require('../action/index');
+// outputTargetsCollide now lives in lib/paths.js, shared with bin/cws-gate.js
+// (see lib/paths.js and bin/cws-gate.js) - imported from its actual home
+// rather than re-exported through action/index.js.
+const { outputTargetsCollide } = require('../lib/paths');
 
 const GOOD_MV3 = path.join(__dirname, '..', 'fixtures', 'good-mv3');
 const BAD_MV3 = path.join(__dirname, '..', 'fixtures', 'bad-mv3');

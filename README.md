@@ -71,8 +71,8 @@ never uploads the SARIF file itself - add a separate
 | CWSG008 | error | A manifest-referenced local file is absent or resolves outside the package |
 | CWSG009 | error | Manifest V2-only keys present in an MV3 manifest |
 | CWSG010 | error | `content_security_policy.extension_pages` script-src allows anything beyond `'self'`, `'none'`, or `'wasm-unsafe-eval'` (nonces and hashes are not honored here either) |
-| CWSG011 | error | Packaged non-sandbox HTML loads a remote or protocol-relative script |
-| CWSG012 | error | JavaScript calls `importScripts(...)` with a literal remote URL |
+| CWSG011 | warning | Packaged non-sandbox HTML loads a remote or protocol-relative script |
+| CWSG012 | warning | JavaScript calls `importScripts(...)` with a literal remote URL |
 | CWSG013 | warning | JavaScript contains `eval(` or `new Function(` (regex-based; flagged for manual review) |
 | CWSG014 | warning | Broad host permissions (`<all_urls>`, wildcard hosts) request human minimum-scope review |
 | CWSG015 | note | A user-data-adjacent permission is a privacy/disclosure reminder, not a necessity verdict |

@@ -8,6 +8,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { scan, operationalFailure } = require('../lib/scan');
 const { renderText, renderJson, renderSarif } = require('../lib/report');
+const { realOrNull, outputTargetsCollide } = require('../lib/paths');
 
 // GitHub Actions env-var convention: INPUT_<NAME> with the name uppercased
 // and spaces (not hyphens) turned into underscores, e.g. "fail-on" ->
@@ -33,21 +34,13 @@ function isPathInside(parent, child) {
   return rel !== '..' && !rel.startsWith(`..${path.sep}`);
 }
 
-// fs.realpathSync follows symlinks *and* Windows junctions to their true
-// target. Containment must be checked against these real paths, not the
-// lexical ones: a directory that is lexically inside GITHUB_WORKSPACE can
-// still be a symlink/junction pointing outside it, and scan() itself
-// realpath-resolves whatever root directory it is given before walking - so
-// a lexical-only check here could wave a link through and have scan()
-// silently follow it outside the workspace. Returns null (never throws) for
-// anything missing or inaccessible; the caller treats null as a rejection.
-function realOrNull(p) {
-  try {
-    return fs.realpathSync(p);
-  } catch {
-    return null;
-  }
-}
+// realOrNull (see lib/paths.js) follows symlinks *and* Windows junctions to
+// their true target via fs.realpathSync. Containment must be checked against
+// these real paths, not the lexical ones: a directory that is lexically
+// inside GITHUB_WORKSPACE can still be a symlink/junction pointing outside
+// it, and scan() itself realpath-resolves whatever root directory it is
+// given before walking - so a lexical-only check here could wave a link
+// through and have scan() silently follow it outside the workspace.
 
 // Resolves an optional json-file/sarif-file input the same way `path` is
 // resolved and contained (see isPathInside/realOrNull above), but for a
@@ -82,54 +75,10 @@ function resolveOutputTarget(workspace, workspaceReal, raw) {
   return parentStat.isDirectory() ? resolved : null;
 }
 
-// True when two already-resolved output-target paths denote the exact same
-// filesystem entry, not merely related ones. Built on the same
-// path.relative(a, b) === '' primitive as isPathInside's own equality case
-// above, which is already platform-native - case-sensitive on POSIX,
-// case-insensitive on Windows - so a spelling that differs only by case
-// collides correctly on Windows and correctly does not on a case-sensitive
-// POSIX filesystem.
-function samePath(a, b) {
-  return path.relative(a, b) === '';
-}
-
-// Best-effort real path of a resolveOutputTarget result, for collision
-// comparison only. When the target already exists (overwriting a prior
-// run's report, or an existing symlink/junction alias) this is its full
-// realpath, resolving the target itself. When it does not exist yet - the
-// common case for a report about to be freshly written - realpathSync
-// cannot resolve the target directly (the whole path must exist), so this
-// instead resolves just the real *parent* directory (resolveOutputTarget
-// above already required that to exist) and rejoins the target's own
-// basename; that still collapses two differently-spelled but identical
-// parent directories - e.g. two symlinks/junctions both really pointing at
-// one reports directory - down to the same comparison path. Null only if
-// even the parent cannot be resolved, which resolveOutputTarget would
-// already have rejected earlier.
-function realOutputPath(resolved) {
-  const existingReal = realOrNull(resolved);
-  if (existingReal !== null) return existingReal;
-  const parentReal = realOrNull(path.dirname(resolved));
-  return parentReal === null ? null : path.join(parentReal, path.basename(resolved));
-}
-
-// json-file and sarif-file each independently pass resolveOutputTarget, but
-// two *different* input strings can still name the one physical file: the
-// same location spelled relative vs absolute, a case-only difference on a
-// case-insensitive filesystem, or two parent directories that are really
-// symlink/junction aliases of each other. Left undetected, the second
-// fs.writeFileSync below would silently clobber the first with the *other*
-// format's content while writeOutput still reports both as
-// successfully-written outputs - a JSON consumer would receive SARIF bytes
-// (or vice versa) with no error anywhere. Checked both lexically and via
-// realOutputPath so neither a spelling trick nor a real filesystem alias
-// slips a genuine collision past as "two different files".
-function outputTargetsCollide(jsonFile, sarifFile) {
-  if (samePath(jsonFile, sarifFile)) return true;
-  const jsonReal = realOutputPath(jsonFile);
-  const sarifReal = realOutputPath(sarifFile);
-  return jsonReal !== null && sarifReal !== null && samePath(jsonReal, sarifReal);
-}
+// samePath/realOutputPath/outputTargetsCollide now live in lib/paths.js
+// (imported above) so the CLI (bin/cws-gate.js) and this Action share exactly
+// one collision-detection implementation instead of two that could drift
+// apart. See lib/paths.js for the full rationale.
 
 // Appends one "name=value\n" line to the GITHUB_OUTPUT environment file.
 // name is always one of this file's own fixed literal strings; value is
@@ -270,4 +219,4 @@ if (require.main === module) {
 }
 /* c8 ignore stop */
 
-module.exports = { runAction, isPathInside, realOrNull, resolveOutputTarget, outputTargetsCollide, writeOutput };
+module.exports = { runAction, isPathInside, realOrNull, resolveOutputTarget, writeOutput };

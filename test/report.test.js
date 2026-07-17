@@ -73,6 +73,16 @@ test('renderText sanitizes CR/LF and other control characters out of finding pat
   assert.equal(injectedLines.length, 0, 'attacker-controlled path/message must never start its own output line');
 });
 
+test('renderText sanitizes CR/LF and other control characters out of operationalError too (GitHub Actions workflow-command injection)', () => {
+  const result = { ...fakeResult([]), operationalError: 'Invalid --fail-on value: bogus\n::error::injected' };
+  const text = renderText(result);
+
+  assert.ok(!text.includes('\n::error::'), 'a raw LF immediately before "::error::" must never survive into the report');
+
+  const injectedLines = text.split('\n').filter((l) => l.startsWith('::error::'));
+  assert.equal(injectedLines.length, 0, 'an attacker-influenced operationalError must never start its own output line');
+});
+
 test('renderJson is valid JSON, omits exitCode, keeps everything else', () => {
   const result = scan(BAD_MV3);
   const json = JSON.parse(renderJson(result));
@@ -200,6 +210,30 @@ test('renderSarif: a Windows-style or leading-slash rootPrefix normalizes to for
     'ventures/cws-gate/popup.html',
     'a leading slash on the prefix must not produce a double slash in the uri',
   );
+});
+
+test('renderSarif percent-encodes each path segment so a space or "#" produces a valid, round-trippable artifactLocation.uri', () => {
+  const weirdPath = 'my folder/file #1.html';
+  const result = fakeResult([fakeFinding({ path: weirdPath })]);
+  const sarif = JSON.parse(renderSarif(result));
+  const uri = sarif.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri;
+
+  assert.ok(!uri.includes(' '), 'a raw space must never appear unencoded in a SARIF uri');
+  assert.ok(!uri.includes('#'), 'a raw "#" must never appear unencoded (it would be read as a URI fragment delimiter)');
+
+  const decoded = uri.split('/').map(decodeURIComponent).join('/');
+  assert.equal(decoded, weirdPath, 'percent-encoding must round-trip segment-by-segment back to the original path');
+});
+
+test('renderSarif percent-encodes a rootPrefix-prefixed uri the same way, and the "/" segment separators survive encoding', () => {
+  const weirdPath = 'my folder/file #1.html';
+  const result = fakeResult([fakeFinding({ path: weirdPath })]);
+  const sarif = JSON.parse(renderSarif(result, 'repo root/sub dir'));
+  const uri = sarif.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri;
+
+  assert.ok(!uri.includes(' ') && !uri.includes('#'), 'space/"#" must be encoded in the prefixed uri too');
+  const decoded = uri.split('/').map(decodeURIComponent).join('/');
+  assert.equal(decoded, 'repo root/sub dir/' + weirdPath, 'decoding segment-by-segment recovers the original prefix + path');
 });
 
 test('renderSarif: primaryLocationLineHash is present, content-derived, stable across a harmless line shift, and distinct for same-line duplicates', () => {

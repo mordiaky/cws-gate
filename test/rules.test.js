@@ -343,6 +343,37 @@ test('CWSG011 catches a remote script src with leading/trailing whitespace', () 
   assert.equal(findings.length, 1, 'whitespace around the URL must not bypass the remote-script check');
 });
 
+test('CWSG011 catches a slashless remote script src (scheme colon without "//" still resolves absolute/remote per WHATWG)', () => {
+  const files = [{ path: 'popup.html' }];
+  const getText = () => '<script src="https:evil.example/x.js"></script>';
+  const findings = rules.checkHtmlRemoteScripts(files, new Set(), getText);
+  assert.equal(findings.length, 1, 'a slashless "https:" src is still a remote load and must be flagged');
+});
+
+test('CWSG012 catches a slashless remote importScripts literal (scheme colon without "//" still resolves absolute/remote per WHATWG)', () => {
+  const files = [{ path: 'bg.js' }];
+  const getText = () => 'importScripts("https:evil.example/x.js");';
+  const findings = rules.checkImportScriptsRemote(files, getText);
+  assert.equal(findings.length, 1, 'a slashless "https:" literal is still a remote load and must be flagged');
+});
+
+test('CWSG011/CWSG012 regression: ordinary local/relative script references still pass clean after the slashless-scheme widening', () => {
+  const htmlFiles = [{ path: 'popup.html' }];
+  const htmlText = () =>
+    '<script src="local.js"></script><script src="./scripts/app.js"></script><script src="../shared/lib.js"></script>';
+  assert.equal(
+    rules.checkHtmlRemoteScripts(htmlFiles, new Set(), htmlText).length, 0,
+    'ordinary package-relative script src values must never be flagged',
+  );
+
+  const jsFiles = [{ path: 'bg.js' }];
+  const jsText = () => 'importScripts("local.js", "./scripts/app.js", "../shared/lib.js");';
+  assert.equal(
+    rules.checkImportScriptsRemote(jsFiles, jsText).length, 0,
+    'ordinary package-relative importScripts literals must never be flagged',
+  );
+});
+
 test('CWSG003/CWSG005 messages never crash on a hostile deeply nested manifest_version/version', () => {
   let deep = 'leaf';
   for (let i = 0; i < 50000; i++) deep = [deep];

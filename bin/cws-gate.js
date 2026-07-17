@@ -2,11 +2,13 @@
 'use strict';
 
 const fs = require('node:fs');
+const path = require('node:path');
 const { parseArgs } = require('node:util');
 const pkg = require('../package.json');
 const { scan } = require('../lib/scan');
 const { renderText, renderJson, renderSarif } = require('../lib/report');
 const { runSelfCheck } = require('../lib/self-check');
+const { outputTargetsCollide } = require('../lib/paths');
 
 const USAGE = `Usage: cws-gate <directory> [options]
 
@@ -63,6 +65,20 @@ function main(argv, io) {
     stdout.write(`${check.details.join('\n')}\n`);
     stdout.write(check.ok ? 'self-check: PASS\n' : 'self-check: FAIL\n');
     return check.ok ? 0 : 1;
+  }
+
+  // --json and --sarif each independently name a report file, but two
+  // different strings (a relative vs. absolute spelling of the same path,
+  // for example) can still resolve to the one real file. Checked up front,
+  // before the scan even runs, using the same shared check the Action
+  // applies to its json-file/sarif-file inputs (lib/paths.js) - so a
+  // collision can never let the second fs.writeFileSync below silently
+  // clobber the first with the other format's bytes. The CLI has no
+  // GITHUB_WORKSPACE concept, so this only ever compares the two resolved
+  // output paths to each other, never to a workspace root.
+  if (values.json && values.sarif && outputTargetsCollide(path.resolve(values.json), path.resolve(values.sarif))) {
+    stderr.write('--json and --sarif must not resolve to the same file.\n');
+    return 2;
   }
 
   const targetDir = positionals[0] || '.';

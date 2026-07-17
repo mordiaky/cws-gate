@@ -92,6 +92,46 @@ test('--json and --sarif write report files to the requested paths', () => {
   assert.equal(sarif.version, '2.1.0');
 });
 
+// --json/--sarif output collision: the two flags must not be allowed to
+// resolve to the one real file. Without this guard the second
+// fs.writeFileSync in main() would silently clobber the first with the
+// *other* format's content while the command still exited 0. Same shared
+// check (lib/paths.js outputTargetsCollide) the Action applies to its
+// json-file/sarif-file inputs - see test/action.test.js's collision tests.
+test('--json and --sarif naming the literal same path is a collision: exit 2, stderr message, neither file written', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cws-gate-cli-collide-literal-'));
+  const target = path.join(tmp, 'out.json');
+  const io = fakeIo();
+  const code = main([GOOD_MV3, '--json', target, '--sarif', target], io);
+  assert.equal(code, 2, 'a --json/--sarif collision must be a CLI usage/operational error, not a silent overwrite');
+  assert.ok(io.err().length > 0, 'a clear stderr message is printed');
+  assert.equal(fs.existsSync(target), false, 'neither file should be written on collision');
+});
+
+test('--json and --sarif resolving to the same real path (relative vs absolute spelling) is still a collision', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cws-gate-cli-collide-relabs-'));
+  const absoluteTarget = path.join(tmp, 'out.json');
+  // A relative spelling of the exact same file, computed from the real
+  // process cwd (never changed here) so main()'s own path.resolve() lands on
+  // the same absolute path without this test needing process.chdir().
+  const relativeTarget = path.relative(process.cwd(), absoluteTarget);
+  const io = fakeIo();
+  const code = main([GOOD_MV3, '--json', relativeTarget, '--sarif', absoluteTarget], io);
+  assert.equal(code, 2, 'a relative and an absolute spelling of the same target must still be caught as a collision');
+  assert.ok(io.err().length > 0);
+  assert.equal(fs.existsSync(absoluteTarget), false, 'neither file should be written on collision');
+});
+
+test('--json and --sarif naming genuinely different files (different basenames) is not a collision', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cws-gate-cli-nocollide-'));
+  const jsonFile = path.join(tmp, 'out.json');
+  const sarifFile = path.join(tmp, 'out.sarif');
+  const io = fakeIo();
+  const code = main([GOOD_MV3, '--json', jsonFile, '--sarif', sarifFile], io);
+  assert.equal(code, 0);
+  assert.ok(fs.existsSync(jsonFile) && fs.existsSync(sarifFile), 'two legitimately distinct report files are both written');
+});
+
 test('end-to-end: the published bin script runs as a real child process and prints a clean report', () => {
   const output = execFileSync(process.execPath, [BIN, GOOD_MV3], { encoding: 'utf8' });
   assert.match(output, /No findings\./);
