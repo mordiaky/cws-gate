@@ -1,0 +1,44 @@
+name: Self-test
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  scan-good-fixture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run CWS Gate against its own clean fixture (expect 0 findings)
+        uses: ./
+        with:
+          path: fixtures/good-mv3
+          fail-on: error
+
+  scan-bad-fixture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run CWS Gate against its own bad fixture (expect the step to fail)
+        id: gate
+        uses: ./
+        with:
+          path: fixtures/bad-mv3
+          fail-on: error
+          json-file: bad-report.json
+          sarif-file: bad-report.sarif
+        continue-on-error: true
+      - name: Confirm the bad fixture correctly failed the gate
+        run: |
+          if [ "${{ steps.gate.outcome }}" != "failure" ]; then
+            echo "Expected the bad-mv3 scan to fail the default error gate, but it did not."
+            exit 1
+          fi
+          echo "Confirmed: bad-mv3 correctly failed the default fail-on: error gate."
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bad-report.sarif
